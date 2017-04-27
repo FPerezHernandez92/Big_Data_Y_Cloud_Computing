@@ -1,7 +1,7 @@
-/opt/spark-1.6.2/bin/spark-submit --master spark://hadoop-master:7077 --class org.apache.spark.examples.SparkPi ~/PiTest2-0.0.1-SNAPSHOT.jar
+#Conexión a la shell de scala
+$ /opt/spark-1.6.2/bin/spark-shell --packages JMailloH:kNN_IS:3.0,sramirez:spark-infotheoretic-feature-selection:1.3.1,sramirez:spark-MDLP-discretization:1.2.1
 
-/opt/spark-1.6.2/bin/spark-shell --packages JMailloH:kNN_IS:3.0, sramirez:spark-infotheoretic-feature-selection:1.3.1, sramirez:spark-MDLP-discretization:1.2.1
-
+//Importación de las librerías
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd._
@@ -13,75 +13,225 @@ import org.apache.spark.mllib.classification.kNN_IS.kNN_IS
 import utils.keel.KeelParser
 import scala.collection.mutable.ListBuffer
 
+//Carga de los datasets
 val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header")
 val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
 train.count()
+//Obteniendo una longitud de 499449 instancias
 val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
 test.count()
+//Obteniendo una longitud de 412636 instancias
 
 
-
-ESTA MAL
-
+//RANDOM FOREST
 import org.apache.spark.mllib.tree.RandomForest
 import org.apache.spark.mllib.tree.model.RandomForestModel
 import org.apache.spark.mllib.util.MLUtils
+//Configuramos el modelo y lo entrenamos
 val numClasses = 2
 val categoricalFeaturesInfo = Map[Int, Int]()
-val numTrees = 10 // Use more in practice.
-val featureSubsetStrategy = "auto" // Let the algorithm choose.
+val numTrees = 10 
+val featureSubsetStrategy = "auto" 
 val impurity = "gini"
 val maxDepth = 4
 val maxBins = 32
-val model = RandomForest.trainClassifier(train, numClasses, categoricalFeaturesInfo, 
-numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins) val predsAndLabels = test.map { point => 
-val prediction = model.predict(point.features) 
-(prediction, point.label)
+val model = RandomForest.trainClassifier(train, numClasses, categoricalFeaturesInfo,
+  numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
+//Evaluamos el modelo con el test
+val predsAndLabels = test.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
 }
-val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count()
-println("Test Error = " + testErr)
-println("Learned model:\n" + model.toebugString)
+//Obtenemos el test error
+val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count() 
+println("Test Error = " + testErr) //0.2943
+println("Learned model:\n" + model.toDebugString) //Mostramos el modelo
 
-
-
-ESTA MAL
-
-import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
-import org.apache.spark.mllib.linalg.Vectors
-val model = NaiveBayes.train(train, lambda = 1.0, modelType = "multinomial")
-val predsAndLabels = test.map { point => val prediction = model.predict(point.features) (prediction, point.label)}
-val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count()
-println("Test Error = " + testErr)
-
-
-
-
-
+//Mostramos los resultados pormenorizados
 import org.apache.spark.mllib.evaluation._
 val metrics = new MulticlassMetrics(predsAndLabels)
-metrics.precision
-metrics.confusionMatrix
+metrics.precision //0.70567
+metrics.confusionMatrix 
+// 268239.0  6852.0   
+// 114598.0  22947.0  
 val binaryMetrics = new BinaryClassificationMetrics(predsAndLabels)
-binaryMetrics.areaUnderROC
+binaryMetrics.areaUnderROC //0.57096
+
+
+//NAIVE BAYES
+import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
+import org.apache.spark.mllib.linalg.Vectors
+//Creamos el modelo
+val model = NaiveBayes.train(train, lambda = 1.0, modelType = "multinomial")
+//Evaluamos el modelo
+val predsAndLabels = test.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
+}
+//Obtenemos el test error
+val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count()
+println("Test Error = " + testErr) //0.29375
+
+//Mostramos los resultados pormenorizados
+import org.apache.spark.mllib.evaluation._
+val metrics = new MulticlassMetrics(predsAndLabels)
+metrics.precision //0.70625
+metrics.confusionMatrix 
+// 248743.0  26348.0  
+// 94863.0   42682.0  
+val binaryMetrics = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics.areaUnderROC //0.60727
+
+
+//DECISION TREES
+import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.tree.model.DecisionTreeModel
+import org.apache.spark.mllib.util.MLUtils
+//Configuramos el modelo y lo entrenamos
+val numClasses = 2
+val categoricalFeaturesInfo = Map[Int, Int]()
+val impurity = "gini"
+val maxDepth = 4
+val maxBins = 32
+val model = DecisionTree.trainClassifier(train, numClasses, categoricalFeaturesInfo,
+  impurity, maxDepth, maxBins)
+//Evaluamos el modelo con el test
+val predsAndLabels = test.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
+}
+//Obtenemos el test error
+val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count() 
+println("Test Error = " + testErr) //0.27039
+println("Learned model:\n" + model.toDebugString) //Mostramos el modelo
+
+//Mostramos los resultados pormenorizados
+import org.apache.spark.mllib.evaluation._
+val metrics = new MulticlassMetrics(predsAndLabels)
+metrics.precision //0.72961
+metrics.confusionMatrix 
+// 233359.0  41732.0  
+// 69840.0   67705.0  
+val binaryMetrics = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics.areaUnderROC //0.67027
+
+
+//DISCRETIZACIÓN DE LOS DATOS
+import org.apache.spark.mllib.feature.MDLPDiscretizer
+val categoricalFeat: Option[Seq[Int]] = None
+val nBins = 15
+val maxByPart = 10000
+println("*** Discretization method: Fayyad discretizer (MDLP)")
+println("*** Number of bins: " + nBins) //15 bins
+//Los datos deben almacenarse en cache para mejorar el rendimiento
+val discretizer = MDLPDiscretizer.train(train, // RDD[LabeledPoint]
+    categoricalFeat, // continuous features
+    nBins, // max number of thresholds by feature
+    maxByPart) // max elements per partition
+discretizer
+//Discretizamos el train
+val discrete = train.map(i => LabeledPoint(i.label, discretizer.transform(i.features))).cache()
+discrete.count() //499449
+discrete.first()
+//Discretizamos el test
+val discreteTest = test.map(i => LabeledPoint(i.label, discretizer.transform(i.features))).cache()
+discreteTest.count() //412636
+
+
+//SELECCIÓN DE CARACTERÍSTICAS SOBRE LOS DATOS DISCRETIZADOS
+import org.apache.spark.mllib.feature._
+val criterion = new InfoThCriterionFactory("mrmr")
+val nToSelect = 10
+val nPartitions = 6
+println("*** FS criterion: " + criterion.getCriterion.toString)
+println("*** Number of features to select: " + nToSelect)
+println("*** Number of partitions: " + nPartitions)
+//Discretizamos con 6 particiones y 10 características
+val featureSelector = new InfoThSelector(criterion, nToSelect, nPartitions).fit(discrete)
+//Obtenemos que:
+//Feature	Score
+//1	0.0762
+//2	0.0275
+//6	0.0065
+//72	0.0043
+//275	0.0001
+//366	-0.0000
+//16	0.0012
+//591	-0.0000
+//611	-0.0000
+//354	-0.0000
+val reduced = discrete.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
+reduced.count()
+//Ahora el test
+val reducedTest = discrete.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
+reducedTest.count()
+
+
+//RANDOM FOREST CON SELECCIÓN DE CARACTERÍSTICAS
+//Entrenamos el modelo sobre el conjunto de datos reducido
+val model = RandomForest.trainClassifier(reduced, numClasses, categoricalFeaturesInfo,
+  numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
+//Evaluamos el modelo 
+val predsAndLabels = reducedTest.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
+}
+val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest.count()
+println("Test Error = " + testErr) //0.27438
+println("Learned model:\n" + model.toDebugString)
+
+//Mostramos los resultados pormenorizados
+val metrics = new MulticlassMetrics(predsAndLabels)
+metrics.precision //0.72562
+metrics.confusionMatrix 
+// 328806.0  20466.0  
+// 116573.0  33604.0   
+val binaryMetrics = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics.areaUnderROC //0.58258
+
+
+//NAIVE BAYES CON SELECCIÓN DE CARACTERÍSTICAS
+val model = NaiveBayes.train(reduced, lambda = 1.0, modelType = "multinomial")
+// Evaluamos
+val predsAndLabels = reducedTest.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
+}
+val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest.count()
+println("Test Error = " + testErr) //0.28493
+
+//Mostramos los resultados pormenorizados
+val metrics = new MulticlassMetrics(predsAndLabels)
+metrics.precision //0.71506
+metrics.confusionMatrix 
+// 282793.0  66479.0  
+// 75831.0   74346.0 
+val binaryMetrics = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics.areaUnderROC //0.65236
 
 
 
+//DECISION TREES CON SELECCIÓN DE CARACTERÍSTICAS
+//Entrenamos el modelo sobre el conjunto de datos reducido
+val model = DecisionTree.trainClassifier(reduced, numClasses, categoricalFeaturesInfo,
+  impurity, maxDepth, maxBins)
+//Evaluamos el modelo 
+val predsAndLabels = reducedTest.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
+}
+val testErr = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest.count()
+println("Test Error = " + testErr) //0.27189
+println("Learned model:\n" + model.toDebugString)
 
-
-importorg.apache.spark.mllib.feature.MDLPDiscretizer
-valcategoricalFeat:Option[Seq[Int]]=None
- valnBins=15
- valmaxByPart=10000
- println("***Discretizationmethod:Fayyaddiscretizer(MDLP)")
- println("***Numberofbins:"+nBins)
- val discretizer = MDLPDiscretizer.train(train, categoricalFeat, nBins, maxByPart)
- val discrete = train.map(i => LabeledPoint(i.label, discretizer.transform(i.features))).cache()
- discrete.count()
- discrete.first()
- val discreteTest = test.map(i => LabeledPoint(i.label, discretizer.transform(i.features))).cache()
- discreteTest.count()
-
-
+//Mostramos los resultados pormenorizados
+val metrics = new MulticlassMetrics(predsAndLabels)
+metrics.precision //0.72810
+metrics.confusionMatrix 
+// 311743.0  37529.0  
+// 98270.0   51907.0  
+val binaryMetrics = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics.areaUnderROC //0.61909
 
 
 
