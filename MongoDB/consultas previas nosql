@@ -251,13 +251,6 @@ Por lo que obtenemos:
 > db.runCommand({ mapReduce: "restaurants", 
 	map : function Map() {
 		var key = this.borough; 
-		var grados;
-		//Me quedo con el ultimo grado 'A' si es que lo tiene
-		for (var idx = 0; idx < this.grades.length; idx++){
-			if (this.grades[idx].grade == "A"){
-				grados = this.grades[idx].grade;
-			}
-		}
 		emit(key, {
 			"data": 
 			[
@@ -266,7 +259,6 @@ Por lo que obtenemos:
 					"lat" : this.address.coord[0], 
 					"lon" : this.address.coord[1],
 					"cuisine" : this.cuisine,
-					"grados" : grados,
 					"grades" : this.grades
 				}
 			]
@@ -284,45 +276,50 @@ Por lo que obtenemos:
 	},
 	finalize : function Finalize(key, reduced){
 		if (reduced.data.length == 1) {
-			return { "message" : "Este cocina solo está una vez" };
+			return { "message" : "Este barrio solo tiene un restaurante con categoría 'A' " };
 		}
 		var min_dist = 999999999999; 
-		var restaurante1 = { "name": "" , "cuisine": "", "grades": "", "grados": ""}; 
-		var restaurante2 = { "name": "" , "cuisine": "", "grades": "", "grados": ""}; 
+		var restaurante1 = { "name": "" , "cuisine": "", "grades": ""}; 
+		var restaurante2 = { "name": "" , "cuisine": "", "grades": ""}; 
 		var c1;
 		var c2;
 		var d;
+		var evaluados = reduced.data.length;
 		for (var i in reduced.data) {
 			for (var j in reduced.data) {
-				if (i>=j) continue;
+				if (i>=j) continue; //termina la iteración actual y continua con la siguiente j
 				c1 = reduced.data[i];
 				c2 = reduced.data[j];
 				d = (c1.lat-c2.lat)*(c1.lat-c2.lat)+(c1.lon-c2.lon)*(c1.lon-c2.lon); 
-				//Actualizo la minima distantica y tienen que haber tenido grado 'A'
-				if ((d < min_dist && d > 0) && (c1.grados == "A" && c2.grados == "A")) {
+				//Actualizo la minima distantica
+				if (d < min_dist && d > 0) {
 					min_dist = d; restaurante1 = c1; restaurante2 = c2;
 				}
 			}
 		}
-		return {"restaurante1": restaurante1.name, "cuisine1": restaurante1.cuisine, "grades1": restaurante1.grades, "grados1":restaurante1.grados, "restaurante2": restaurante2.name, "cuisine2": restaurante2.cuisine, "grades2":restaurante2.grades , "grados2":restaurante2.grados , "dist": Math.sqrt(min_dist)};
+		return {"restaurante1": restaurante1.name, "cuisine1": restaurante1.cuisine, "grades1": restaurante1.grades, "restaurante2": restaurante2.name, "cuisine2": restaurante2.cuisine, "grades2":restaurante2.grades, "dist": Math.sqrt(min_dist), "evaluados":evaluados};
 	},
-	query : { },
-	out : { merge: "restaurantes_proximos"}
+	query : { "grades.grade" : {"$eq" : 'A'}},
+	out : { merge: "rest_resultado"}
 });
 
-Por lo que obtenemos:
+EL RESULTADO SERÍA: 
 {
-	"result" : "restaurantes_proximos",
-	"timeMillis" : 49123,
+	"result" : "rest_resultado",
+	"timeMillis" : 39377,
 	"counts" : {
-		"input" : 25359,
-		"emit" : 25359,
-		"reduce" : 1256,
+		"input" : 23440,
+		"emit" : 23440,
+		"reduce" : 1164,
 		"output" : 6
 	},
 	"ok" : 1
 }
 
+
+
+
+5. > db.rest_resultado.find().pretty()
 {
 	"_id" : "Bronx",
 	"value" : {
@@ -345,7 +342,6 @@ Por lo que obtenemos:
 				"score" : 12
 			}
 		],
-		"grados1" : "A",
 		"restaurante2" : "Chen'S Foo Hai",
 		"cuisine2" : "Chinese",
 		"grades2" : [
@@ -375,8 +371,8 @@ Por lo que obtenemos:
 				"score" : 13
 			}
 		],
-		"grados2" : "A",
-		"dist" : 5.656854265355972e-7
+		"dist" : 5.656854265355972e-7,
+		"evaluados" : 2168
 	}
 }
 {
@@ -411,7 +407,6 @@ Por lo que obtenemos:
 				"score" : 12
 			}
 		],
-		"grados1" : "A",
 		"restaurante2" : "Dunkin' Donuts",
 		"cuisine2" : "Donuts",
 		"grades2" : [
@@ -436,16 +431,60 @@ Por lo que obtenemos:
 				"score" : 2
 			}
 		],
-		"grados2" : "A",
-		"dist" : 0.000003862641583420379
+		"dist" : 0.000003862641583420379,
+		"evaluados" : 5610
+	}
+}
+{
+	"_id" : "Manhattan",
+	"value" : {
+		"restaurante1" : "Rockwood Music Hall (Stage Zero)",
+		"cuisine1" : "American ",
+		"grades1" : [
+			{
+				"date" : ISODate("2014-04-29T00:00:00Z"),
+				"grade" : "A",
+				"score" : 12
+			},
+			{
+				"date" : ISODate("2013-04-12T00:00:00Z"),
+				"grade" : "A",
+				"score" : 7
+			},
+			{
+				"date" : ISODate("2012-03-02T00:00:00Z"),
+				"grade" : "A",
+				"score" : 12
+			}
+		],
+		"restaurante2" : "Cheese Grille",
+		"cuisine2" : "Sandwiches/Salads/Mixed Buffet",
+		"grades2" : [
+			{
+				"date" : ISODate("2014-10-31T00:00:00Z"),
+				"grade" : "A",
+				"score" : 7
+			}
+		],
+		"dist" : 0.000010016985567509196,
+		"evaluados" : 9579
 	}
 }
 {
 	"_id" : "Missing",
 	"value" : {
-		"restaurante1" : "Lima 33",
-		"cuisine1" : "Peruvian",
+		"restaurante1" : "Little Neck Shanghai & Taiwanese Cuisine",
+		"cuisine1" : "Asian",
 		"grades1" : [
+			{
+				"date" : ISODate("2014-05-20T00:00:00Z"),
+				"grade" : "A",
+				"score" : 8
+			}
+		],
+		"restaurante2" : "Lima 33",
+		"cuisine2" : "Peruvian",
+		"grades2" : [
 			{
 				"date" : ISODate("2014-09-10T00:00:00Z"),
 				"grade" : "A",
@@ -457,18 +496,8 @@ Por lo que obtenemos:
 				"score" : 10
 			}
 		],
-		"grados1" : "A",
-		"restaurante2" : "Little Neck Shanghai & Taiwanese Cuisine",
-		"cuisine2" : "Asian",
-		"grades2" : [
-			{
-				"date" : ISODate("2014-05-20T00:00:00Z"),
-				"grade" : "A",
-				"score" : 8
-			}
-		],
-		"grados2" : "A",
-		"dist" : 0.0011684476282611152
+		"dist" : 0.0011684476282611152,
+		"evaluados" : 50
 	}
 }
 {
@@ -503,7 +532,6 @@ Por lo que obtenemos:
 				"score" : 27
 			}
 		],
-		"grados1" : "A",
 		"restaurante2" : "Domino'S Pizza",
 		"cuisine2" : "Pizza",
 		"grades2" : [
@@ -538,8 +566,8 @@ Por lo que obtenemos:
 				"score" : 43
 			}
 		],
-		"grados2" : "A",
-		"dist" : 9.999997985232767e-8
+		"dist" : 9.999997985232767e-8,
+		"evaluados" : 5157
 	}
 }
 {
@@ -569,7 +597,6 @@ Por lo que obtenemos:
 				"score" : 9
 			}
 		],
-		"grados1" : "A",
 		"restaurante2" : "Call It A Wrap",
 		"cuisine2" : "American ",
 		"grades2" : [
@@ -594,8 +621,101 @@ Por lo que obtenemos:
 				"score" : 10
 			}
 		],
-		"grados2" : "A",
-		"dist" : 0.000007071067808080774
+		"dist" : 0.000007071067808080774,
+		"evaluados" : 876
+	}
+}
+
+
+
+6. Si eliminamos que se muestren los grados: 
+> db.runCommand({ mapReduce: "restaurants", 
+	map : function Map() {
+		var key = this.borough; 
+		emit(key, {
+			"data": 
+			[
+				{
+					"name" : this.name, 
+					"lat" : this.address.coord[0], 
+					"lon" : this.address.coord[1],
+					"cuisine" : this.cuisine
+				}
+			]
+		});
+	},
+	reduce : function Reduce(key, values) {
+		var reduced = {"data":[]}; 
+		for (var i in values) {
+			var inter = values[i];
+			for (var j in inter.data){
+				reduced.data.push(inter.data[j]);
+			}
+		}
+		return reduced;
+	},
+	finalize : function Finalize(key, reduced){
+		if (reduced.data.length == 1) {
+			return { "message" : "Este barrio solo tiene un restaurante con categoría 'A' " };
+		}
+		var min_dist = 999999999999; 
+		var restaurante1 = { "name": "" , "cuisine": ""}; 
+		var restaurante2 = { "name": "" , "cuisine": ""}; 
+		var c1;
+		var c2;
+		var d;
+		var evaluados = reduced.data.length;
+		for (var i in reduced.data) {
+			for (var j in reduced.data) {
+				if (i>=j) continue; //termina la iteración actual y continua con la siguiente j
+				c1 = reduced.data[i];
+				c2 = reduced.data[j];
+				d = (c1.lat-c2.lat)*(c1.lat-c2.lat)+(c1.lon-c2.lon)*(c1.lon-c2.lon); 
+				//Actualizo la minima distantica
+				if (d < min_dist && d > 0) {
+					min_dist = d; restaurante1 = c1; restaurante2 = c2;
+				}
+			}
+		}
+		return {"restaurante1": restaurante1.name, "cuisine1": restaurante1.cuisine,  "restaurante2": restaurante2.name, "cuisine2": restaurante2.cuisine, "dist": Math.sqrt(min_dist), "evaluados":evaluados};
+	},
+	query : { "grades.grade" : {"$eq" : 'A'}},
+	out : { merge: "rest_resultado"}
+});
+
+{
+	"result" : "rest_resultado",
+	"timeMillis" : 39283,
+	"counts" : {
+		"input" : 23440,
+		"emit" : 23440,
+		"reduce" : 1164,
+		"output" : 6
+	},
+	"ok" : 1
+}
+
+7. > db.rest_resultado.find().pretty()
+{
+	"_id" : "Bronx",
+	"value" : {
+		"restaurante1" : "Subway",
+		"cuisine1" : "American ",
+		"restaurante2" : "Chen'S Foo Hai",
+		"cuisine2" : "Chinese",
+		"dist" : 5.656854265355972e-7,
+		"evaluados" : 2168
+	}
+}
+{
+	"_id" : "Brooklyn",
+	"value" : {
+		"restaurante1" : "V J Bakery",
+		"cuisine1" : "Delicatessen",
+		"restaurante2" : "Dunkin' Donuts",
+		"cuisine2" : "Donuts",
+		"dist" : 0.000003862641583420379,
+		"evaluados" : 5610
 	}
 }
 {
@@ -603,35 +723,43 @@ Por lo que obtenemos:
 	"value" : {
 		"restaurante1" : "Rockwood Music Hall (Stage Zero)",
 		"cuisine1" : "American ",
-		"grades1" : [
-			{
-				"date" : ISODate("2014-04-29T00:00:00Z"),
-				"grade" : "A",
-				"score" : 12
-			},
-			{
-				"date" : ISODate("2013-04-12T00:00:00Z"),
-				"grade" : "A",
-				"score" : 7
-			},
-			{
-				"date" : ISODate("2012-03-02T00:00:00Z"),
-				"grade" : "A",
-				"score" : 12
-			}
-		],
-		"grados1" : "A",
 		"restaurante2" : "Cheese Grille",
 		"cuisine2" : "Sandwiches/Salads/Mixed Buffet",
-		"grades2" : [
-			{
-				"date" : ISODate("2014-10-31T00:00:00Z"),
-				"grade" : "A",
-				"score" : 7
-			}
-		],
-		"grados2" : "A",
-		"dist" : 0.000010016985567509196
+		"dist" : 0.000010016985567509196,
+		"evaluados" : 9579
+	}
+}
+{
+	"_id" : "Missing",
+	"value" : {
+		"restaurante1" : "Lima 33",
+		"cuisine1" : "Peruvian",
+		"restaurante2" : "Little Neck Shanghai & Taiwanese Cuisine",
+		"cuisine2" : "Asian",
+		"dist" : 0.0011684476282611152,
+		"evaluados" : 50
+	}
+}
+{
+	"_id" : "Queens",
+	"value" : {
+		"restaurante1" : "New Haw Hing Garden",
+		"cuisine1" : "Chinese",
+		"restaurante2" : "Domino'S Pizza",
+		"cuisine2" : "Pizza",
+		"dist" : 9.999997985232767e-8,
+		"evaluados" : 5157
+	}
+}
+{
+	"_id" : "Staten Island",
+	"value" : {
+		"restaurante1" : "Egger'S Ice Cream Parlor",
+		"cuisine1" : "Ice Cream, Gelato, Yogurt, Ices",
+		"restaurante2" : "Call It A Wrap",
+		"cuisine2" : "American ",
+		"dist" : 0.000007071067808080774,
+		"evaluados" : 876
 	}
 }
 
@@ -639,11 +767,3 @@ Por lo que obtenemos:
 
 
 
-
-
-
-Elaborar el código MapReduce que resuelva la consulta:
-
-"Obtener el par de restaurantes más próximos en cada barrio (borough), mostrando el nombre y tipo de cocina de esos restaurantes, la distancia entre ellos y la cantidad de restaurantes evaluados para cada barrio, para aquellos restaurantes que hayan tenido un grado= ‘A’ en alguna ocasión"
-
-El resultado del ejercicio será un archivo con el código que resuelve la consulta (según el formato mostrado en la transparencia 17 del tutorial) y que podrá ser ejecutado directamente sobre su base de datos MongoDB de hadoop.ugr.es, la cual que debe incluir la colección restaurants importada y la colección rest_resultado con los documentos resultado de la consulta propuesta.

@@ -1,0 +1,53 @@
+db.runCommand({ mapReduce: "restaurants", 
+	map : function Map() {
+		var key = this.borough; 
+		emit(key, {
+			"data": 
+			[
+				{
+					"name" : this.name, 
+					"lat" : this.address.coord[0], 
+					"lon" : this.address.coord[1],
+					"cuisine" : this.cuisine
+				}
+			]
+		});
+	},
+	reduce : function Reduce(key, values) {
+		var reduced = {"data":[]}; 
+		for (var i in values) {
+			var inter = values[i];
+			for (var j in inter.data){
+				reduced.data.push(inter.data[j]);
+			}
+		}
+		return reduced;
+	},
+	finalize : function Finalize(key, reduced){
+		if (reduced.data.length == 1) {
+			return { "message" : "Este barrio solo tiene un restaurante con categoría 'A' " };
+		}
+		var min_dist = 999999999999; 
+		var restaurante1 = { "name": "" , "cuisine": ""}; 
+		var restaurante2 = { "name": "" , "cuisine": ""}; 
+		var c1;
+		var c2;
+		var d;
+		var evaluados = reduced.data.length;
+		for (var i in reduced.data) {
+			for (var j in reduced.data) {
+				if (i>=j) continue; //termina la iteración actual y continua con la siguiente j
+				c1 = reduced.data[i];
+				c2 = reduced.data[j];
+				d = (c1.lat-c2.lat)*(c1.lat-c2.lat)+(c1.lon-c2.lon)*(c1.lon-c2.lon); 
+				//Actualizo la minima distantica
+				if (d < min_dist && d > 0) {
+					min_dist = d; restaurante1 = c1; restaurante2 = c2;
+				}
+			}
+		}
+		return {"restaurante1": restaurante1.name, "cuisine1": restaurante1.cuisine,  "restaurante2": restaurante2.name, "cuisine2": restaurante2.cuisine, "dist": Math.sqrt(min_dist), "evaluados":evaluados};
+	},
+	query : { "grades.grade" : {"$eq" : 'A'}},
+	out : { merge: "rest_resultado"}
+});
