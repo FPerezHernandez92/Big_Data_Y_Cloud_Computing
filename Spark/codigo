@@ -1,6 +1,11 @@
 #Conexión a la shell de scala
 /opt/spark-1.6.2/bin/spark-shell --packages JMailloH:kNN_IS:3.0,sramirez:spark-infotheoretic-feature-selection:1.3.1,sramirez:spark-MDLP-discretization:1.2.1
 
+//Mostrar solamente los mensajes de ERROR
+import org.apache.log4j.{Level, Logger}
+var rootLogger = Logger.getRootLogger()
+rootLogger.setLevel(Level.WARN)
+
 //Importación de las librerías
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkConf
@@ -12,21 +17,28 @@ import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.mllib.classification.kNN_IS.kNN_IS
 import utils.keel.KeelParser
 import scala.collection.mutable.ListBuffer
+//Random Forest
+import org.apache.spark.mllib.tree.RandomForest
+import org.apache.spark.mllib.tree.model.RandomForestModel
+import org.apache.spark.mllib.util.MLUtils
+//Fichero para imprimir las salidas
+import java.io._
+val writer = new PrintWriter(new File("salidaprueba.txt"))
+//Obtenemos los resultados
+import org.apache.spark.mllib.evaluation._
+
 
 //Carga de los datasets
 val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header")
 val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
-train.count()
-//Obteniendo una longitud de 499449 instancias
+writer.write("En train las instancias son: " + train.count() + "\n")
 val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
-test.count()
-//Obteniendo una longitud de 412636 instancias
+writer.write("En test las instancias son: " + test.count() + "\n")
 
 
-//RANDOM FOREST
-import org.apache.spark.mllib.tree.RandomForest
-import org.apache.spark.mllib.tree.model.RandomForestModel
-import org.apache.spark.mllib.util.MLUtils
+//RANDOM FOREST 1
+writer.write("Comienzo Random Forest 1 con los siguientes parámetros:" + "\n")
+val tiempo_inicial = System.currentTimeMillis / 1000
 //Configuramos el modelo y lo entrenamos
 val numClasses = 2
 val categoricalFeaturesInfo = Map[Int, Int]()
@@ -35,6 +47,7 @@ val featureSubsetStrategy = "auto"
 val impurity = "gini"
 val maxDepth = 4
 val maxBins = 32
+writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo: Map[Int, Int]()" + "\n\tnumTrees: " + numTrees + "\n\tfeatureSubsetStrategy: " + featureSubsetStrategy + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxDepth + "\n\tmaxBins: " + maxBins + "\n")
 val model = RandomForest.trainClassifier(train, numClasses, categoricalFeaturesInfo,
   numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
 //Evaluamos el modelo con el test
@@ -43,23 +56,24 @@ val predsAndLabels = test.map { point =>
   (prediction, point.label)
 }
 //Obtenemos el test error
+writer.write("\nResultados:")
 val testErr_rf1 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count() 
-println("Test Error rf1 = " + testErr_rf1) //0.2943
-println("Learned model:\n" + model.toDebugString) //Mostramos el modelo
-
+writer.write("\n\tTest Error= " + testErr_rf1)
+//println("Learned model:\n" + model.toDebugString) //Mostramos el modelo COMENTADO
 //Mostramos los resultados pormenorizados
-import org.apache.spark.mllib.evaluation._
 val metrics_rf1 = new MulticlassMetrics(predsAndLabels)
-metrics_rf1.precision //0.70567
-metrics_rf1.confusionMatrix 
-// 268239.0  6852.0   
-// 114598.0  22947.0  
+writer.write("\n\tPrecisión: " + metrics_rf1.precision)
+writer.write("\n\tMatriz de confusión: \n" + metrics_rf1.confusionMatrix )
 val binaryMetrics_rf1 = new BinaryClassificationMetrics(predsAndLabels)
-val area_under_ROC_rf1 = binaryMetrics_rf1.areaUnderROC //0.57096
-println("Area under ROC = " + area_under_ROC_rf1)
+val area_under_ROC_rf1 = binaryMetrics_rf1.areaUnderROC
+writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_rf1)
+val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
+val minutos = segundos / 60
+writer.write("\nFin de Random Forest 1 con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
 
 
-//NAIVE BAYES
+
+//NAIVE BAYES 1
 import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
 import org.apache.spark.mllib.linalg.Vectors
 //Creamos el modelo
@@ -85,7 +99,7 @@ val area_under_ROC_nb1 = binaryMetrics_nb1.areaUnderROC //0.60727
 println("Area under ROC = " + area_under_ROC_nb1)
 
 
-//DECISION TREES
+//DECISION TREES 1
 import org.apache.spark.mllib.tree.DecisionTree
 import org.apache.spark.mllib.tree.model.DecisionTreeModel
 import org.apache.spark.mllib.util.MLUtils
@@ -170,30 +184,35 @@ val reducedTest10 = discreteTrain.map(i => LabeledPoint(i.label, featureSelector
 reducedTest10.count()
 
 
-//RANDOM FOREST CON SELECCIÓN DE CARACTERÍSTICAS
-//Entrenamos el modelo sobre el conjunto de datos reducido
+//RANDOM FOREST 2 CON SELECCIÓN DE CARACTERÍSTICAS
+writer.write("\nComienzo Random Forest 2 (Selección de características) con los siguientes parámetros:" + "\n")
+val tiempo_inicial = System.currentTimeMillis / 1000
+writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo: Map[Int, Int]()" + "\n\tnumTrees: " + numTrees + "\n\tfeatureSubsetStrategy: " + featureSubsetStrategy + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxDepth + "\n\tmaxBins: " + maxBins + "\n")
 val model = RandomForest.trainClassifier(reducedTrain10, numClasses, categoricalFeaturesInfo,
   numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
-//Evaluamos el modelo 
+//Evaluamos el modelo con el test
 val predsAndLabels = reducedTest10.map { point =>
   val prediction = model.predict(point.features)
   (prediction, point.label)
 }
+//Obtenemos el test error
+writer.write("\nResultados:")
 val testErr_rf2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest10.count()
-println("Test Error = " + testErr_rf2) //0.27438
-println("Learned model:\n" + model.toDebugString)
-
+writer.write("\n\tTest Error= " + testErr_rf2)
+//println("Learned model:\n" + model.toDebugString) //Mostramos el modelo COMENTADO
 //Mostramos los resultados pormenorizados
 val metrics_rf2 = new MulticlassMetrics(predsAndLabels)
-metrics_rf2.precision //0.72562
-metrics_rf2.confusionMatrix 
-// 328806.0  20466.0  
-// 116573.0  33604.0   
+writer.write("\n\tPrecisión: " + metrics_rf2.precision)
+writer.write("\n\tMatriz de confusión: \n" + metrics_rf2.confusionMatrix )
 val binaryMetrics_rf2 = new BinaryClassificationMetrics(predsAndLabels)
 val area_under_ROC_rf2 = binaryMetrics_rf2.areaUnderROC //0.58258
-println("Area Under ROC = " + area_under_ROC_rf2)
+writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_rf2)
+val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
+val minutos = segundos / 60
+writer.write("\nFin de Random Forest 2 (selección de características) con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
 
-//NAIVE BAYES CON SELECCIÓN DE CARACTERÍSTICAS
+
+//NAIVE BAYES 2 CON SELECCIÓN DE CARACTERÍSTICAS
 val model = NaiveBayes.train(reducedTrain10, lambda = 1.0, modelType = "multinomial")
 // Evaluamos
 val predsAndLabels = reducedTest10.map { point =>
@@ -214,7 +233,7 @@ val area_under_ROC_nb2 = binaryMetrics_nb2.areaUnderROC //0.65236
 println("Area Under ROC = " + area_under_ROC_nb2)
 
 
-//DECISION TREES CON SELECCIÓN DE CARACTERÍSTICAS
+//DECISION TREES 2 CON SELECCIÓN DE CARACTERÍSTICAS
 //Entrenamos el modelo sobre el conjunto de datos reducido
 val model = DecisionTree.trainClassifier(reducedTrain10, numClasses, categoricalFeaturesInfo,
   impurity, maxDepth, maxBins)
@@ -240,17 +259,7 @@ println("Area Under ROC = " + area_under_ROC_dt2)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+writer.close()
 
 
 println("RANDOM FOREST RF1")
@@ -290,5 +299,5 @@ println("Precision dt2 = " + metrics_dt2.precision) //0.
 println("Confusion Matrix dt2 = " + metrics_dt2.confusionMatrix) //0.
 println("Area Under ROC dt2 = " + area_under_ROC_dt2) //0.
 
-
+exit
 
