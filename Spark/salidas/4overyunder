@@ -42,8 +42,8 @@ val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datasets/ECB
 val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
 val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
 
-val trainROS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_ROS.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
-val testROS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_ROS.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
+val trainROS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
+val testROS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
 
 val trainRUS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_RUS.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
 val testRUS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_RUS.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()

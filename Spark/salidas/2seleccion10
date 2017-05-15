@@ -197,5 +197,9 @@ writer.close()
 
 reducedTest10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/");
 reducedTrain10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10/");
+reducedTrain10.repartition(6).coalesce(1, shuffle = true).saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10.data")
+reducedTest10.repartition(6).coalesce(1, shuffle = true).saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10.data")
+
+
 
 exit
