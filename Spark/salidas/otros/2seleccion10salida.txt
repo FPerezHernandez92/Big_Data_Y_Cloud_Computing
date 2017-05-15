@@ -1,0 +1,62 @@
+En train las instancias son: 499449
+En test las instancias son: 412636
+Comienzo Discretización de los Datos con los siguientes parámetros:
+
+Discretización de los datos
+	*** Discretization method: Fayyad discretizer (MDLP)
+	categoricalFeat: Option[Seq[Int]] = None 
+	Number of bins: 15
+	Max By Part: 10000
+
+Fin de Discretización de los datos con una duración de: 43 segundos o de 0 minutos
+Comienzo Selección de características con los datos discretizados y los siguientes parámetros:
+	*** FS criterion: MRMR
+	Number of features to select: 10
+	Number of partitions: 6
+Fin de selección de características con los datos discretizados y con una duración de: 39 segundos o de 0 minutos
+
+Comienzo Random Forest 2 (Selección de características) con los siguientes parámetros:
+	NumClasses: 2
+	categoricalFeaturesInfo: Map[Int, Int]()
+	numTrees: 10
+	featureSubsetStrategy: auto
+	impurity: gini
+	maxDepth: 4
+	maxBins: 32
+
+Resultados:
+	Test Error= 0.2739418839561196
+	Precisión: 0.7260581160438804
+	Matriz de confusión: 
+329480.0  19792.0  
+117028.0  33149.0  
+	Area bajo la curva ROC = 0.5820332154648138
+Fin de Random Forest 2 (selección de características) con una duración de: 10 segundos o de 0 minutos
+
+Comienzo Naive Bayes 2 (Selección de Características) con los siguientes parámetros:
+	lambda: 1.0
+	modelType: multinomial
+
+Resultados:
+	TestError= 0.284933997264986
+	Precisión: 0.715066002735014
+	Matriz de confusión: 
+282793.0  66479.0  
+75831.0   74346.0  
+	Area bajo la curva ROC = 0.6523599677232557
+Fin de Naive Bayes 2 con una duración de: 3 segundos o de 0 minutos
+Comienzo Decision Trees 1 con los siguientes parámetros:
+	NumClasses: 2
+	categoricalFeaturesInfo: Map[Int, Int]()
+	impurity: gini
+	maxDepth: 4
+	maxBins: 32
+
+Resultados:
+	TestError= 0.2718976311895709
+	Precisión: 0.7281023688104291
+	Matriz de confusión: 
+311743.0  37529.0  
+98270.0   51907.0  
+	Area bajo la curva ROC = 0.6190948021138991
+Fin de Decision Trees 2 con una duración de: 4 segundos o de 0 minutos

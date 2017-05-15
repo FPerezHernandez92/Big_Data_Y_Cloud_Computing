@@ -1,0 +1,10 @@
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runRUS Imb-sampling-1.1.jar hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/part-* hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/part-* 250 0 1 hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_under10.data
+
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runROS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data 100 250 1 0 2 hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_ROS.data
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runROS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data 100 250 0 1 2 hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_ROS.data
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runRUS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data 250 1 0 hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_RUS.data
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runRUS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data 250 1 0 hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_RUS.data

@@ -1,0 +1,355 @@
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /___/ .__/\_,_/_/ /_/\_\   version 1.6.2
+      /_/
+
+Using Scala version 2.10.5 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_51)
+Type in expressions to have them evaluated.
+Type :help for more information.
+Spark context available as sc.
+SQL context available as sqlContext.
+
+scala> //Mostrar solamente los mensajes de ERROR
+
+scala> import org.apache.log4j.{Level, Logger}
+import org.apache.log4j.{Level, Logger}
+
+scala> var rootLogger = Logger.getRootLogger()
+rootLogger: org.apache.log4j.Logger = org.apache.log4j.spi.RootLogger@1bba731b
+
+scala> rootLogger.setLevel(Level.WARN)
+
+scala> //Importación de las librerías
+
+scala> import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext
+
+scala> import org.apache.spark.SparkConf
+import org.apache.spark.SparkConf
+
+scala> import org.apache.spark.rdd._
+import org.apache.spark.rdd._
+
+scala> import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.Vectors
+
+scala> import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.regression.LabeledPoint
+
+scala> import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
+
+scala> import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+
+scala> import org.apache.spark.mllib.classification.kNN_IS.kNN_IS
+import org.apache.spark.mllib.classification.kNN_IS.kNN_IS
+
+scala> import utils.keel.KeelParser
+import utils.keel.KeelParser
+
+scala> import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.ListBuffer
+
+scala> //Random Forest
+
+scala> import org.apache.spark.mllib.tree.RandomForest
+import org.apache.spark.mllib.tree.RandomForest
+
+scala> import org.apache.spark.mllib.tree.model.RandomForestModel
+import org.apache.spark.mllib.tree.model.RandomForestModel
+
+scala> import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.mllib.util.MLUtils
+
+scala> //Naive Bayes
+
+scala> import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel }
+import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
+
+scala> import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.Vectors
+
+scala> //Decision Trees
+
+scala> import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.tree.DecisionTree
+
+scala> import org.apache.spark.mllib.tree.model.DecisionTreeModel
+import org.apache.spark.mllib.tree.model.DecisionTreeModel
+
+scala> import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.mllib.util.MLUtils
+
+scala> //Fichero para imprimir las salidas
+
+scala> import java.io._
+import java.io._
+
+scala> val writer = new PrintWriter(new File("1inicialsalida.txt"))
+writer: java.io.PrintWriter = java.io.PrintWriter@55b24c84
+
+scala> //Obtenemos los resultados
+
+scala> import org.apache.spark.mllib.evaluation._
+import org.apache.spark.mllib.evaluation._
+
+scala> 
+
+scala> 
+
+scala> //Carga de los datasets
+
+scala> val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datas ets/ECBDL14_mbd/ecbdl14.header")
+converter: utils.keel.KeelParser = utils.keel.KeelParser@218531e6
+
+scala> val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14 _mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coal esce(6).cache()
+train: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] = CoalescedRDD[5] at coalesce at <console>:57
+
+scala> writer.write("En train las instancias son: " + train.count() + "\n")
+
+scala> val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_ mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache ()
+test: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] = MapPartitionsRDD[8] at map at <console>:57
+
+scala> writer.write("En test las instancias son: " + test.count() + "\n")
+
+scala> 
+
+scala> 
+
+scala> //RANDOM FOREST 1
+
+scala> writer.write("Comienzo Random Forest 1 con los siguientes parámetros:" +  "\n")
+
+scala> val tiempo_inicial = System.currentTimeMillis / 1000
+tiempo_inicial: Long = 1494013998
+
+scala> //Configuramos el modelo y lo entrenamos
+
+scala> val numClasses = 2
+numClasses: Int = 2
+
+scala> val categoricalFeaturesInfo = Map[Int, Int]()
+categoricalFeaturesInfo: scala.collection.immutable.Map[Int,Int] = Map()
+
+scala> val numTrees = 10 
+numTrees: Int = 10
+
+scala> val featureSubsetStrategy = "auto" 
+featureSubsetStrategy: String = auto
+
+scala> val impurity = "gini"
+impurity: String = gini
+
+scala> val maxDepth = 4
+maxDepth: Int = 4
+
+scala> val maxBins = 32
+maxBins: Int = 32
+
+scala> writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo : Map[Int, Int]()" + "\n\tnumTrees: " + numTrees + "\n\tfeatureSubsetStrategy: "  + featureSubsetStrategy + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxD epth + "\n\tmaxBins: " + maxBins + "\n")
+
+scala> val model = RandomForest.trainClassifier(train, numClasses, categoricalFe aturesInfo,
+     |   numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
+model: org.apache.spark.mllib.tree.model.RandomForestModel = 
+TreeEnsembleModel classifier with 10 trees
+
+
+scala> //Evaluamos el modelo con el test
+
+scala> val predsAndLabels = test.map { point =>
+     |   val prediction = model.predict(point.features)
+     |   (prediction, point.label)
+     | }
+predsAndLabels: org.apache.spark.rdd.RDD[(Double, Double)] = MapPartitionsRDD[29] at map at <console>:77
+
+scala> //Obtenemos el test error
+
+scala> writer.write("\nResultados:")
+
+scala> val testErr_rf1 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble  / test.count() 
+testErr_rf1: Double = 0.2860002520381159
+
+scala> writer.write("\n\tTest Error= " + testErr_rf1)
+
+scala> //println("Learned model:\n" + model.toDebugString) //Mostramos el modelo  COMENTADO
+
+scala> //Mostramos los resultados pormenorizados
+
+scala> val metrics_rf1 = new MulticlassMetrics(predsAndLabels)
+metrics_rf1: org.apache.spark.mllib.evaluation.MulticlassMetrics = org.apache.spark.mllib.evaluation.MulticlassMetrics@7754d8aa
+
+scala> writer.write("\n\tPrecisión: " + metrics_rf1.precision)
+
+scala> writer.write("\n\tMatriz de confusión: \n" + metrics_rf1.confusionMatrix  )
+
+scala> val binaryMetrics_rf1 = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics_rf1: org.apache.spark.mllib.evaluation.BinaryClassificationMetrics = org.apache.spark.mllib.evaluation.BinaryClassificationMetrics@78ec200e
+
+scala> val area_under_ROC_rf1 = binaryMetrics_rf1.areaUnderROC
+area_under_ROC_rf1: Double = 0.5907067494566283
+
+scala> writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_rf1)
+
+scala> val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
+segundos: Long = 21
+
+scala> val minutos = segundos / 60
+minutos: Long = 0
+
+scala> writer.write("\nFin de Random Forest 1 con una duración de: " + segundos  + " segundos o de " +  minutos + " minutos" + "\n")
+
+scala> 
+
+scala> 
+
+scala> //NAIVE BAYES 1
+
+scala> writer.write("Comienzo Naive Bayes 1 con los siguientes parámetros:" + "\ n")
+
+scala> val tiempo_inicial = System.currentTimeMillis / 1000
+tiempo_inicial: Long = 1494014020
+
+scala> //Creamos el modelo
+
+scala> val miLambda = 1.0
+miLambda: Double = 1.0
+
+scala> val miModelType = "multinomial"
+miModelType: String = multinomial
+
+scala> writer.write("\tlambda: " + miLambda + "\n\tmodelType: " + miModelType +  "\n")
+
+scala> val model = NaiveBayes.train(train, lambda = miLambda, modelType = miMode lType)
+model: org.apache.spark.mllib.classification.NaiveBayesModel = org.apache.spark.mllib.classification.NaiveBayesModel@4ea3a298
+
+scala> //Evaluamos el modelo
+
+scala> val predsAndLabels = test.map { point =>
+     |   val prediction = model.predict(point.features)
+     |   (prediction, point.label)
+     | }
+predsAndLabels: org.apache.spark.rdd.RDD[(Double, Double)] = MapPartitionsRDD[55] at map at <console>:67
+
+scala> //Obtenemos el test error
+
+scala> writer.write("\nResultados:")
+
+scala> val testErr_nb1 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble  / test.count()
+testErr_nb1: Double = 0.2937480006591766
+
+scala> writer.write("\n\tTestError= " + testErr_nb1)
+
+scala> //Mostramos los resultados pormenorizados
+
+scala> val metrics_nb1 = new MulticlassMetrics(predsAndLabels)
+metrics_nb1: org.apache.spark.mllib.evaluation.MulticlassMetrics = org.apache.spark.mllib.evaluation.MulticlassMetrics@877e15a
+
+scala> writer.write("\n\tPrecisión: " + metrics_nb1.precision)
+
+scala> writer.write("\n\tMatriz de confusión: \n" + metrics_nb1.confusionMatrix  )
+
+scala> val binaryMetrics_nb1 = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics_nb1: org.apache.spark.mllib.evaluation.BinaryClassificationMetrics = org.apache.spark.mllib.evaluation.BinaryClassificationMetrics@42474908
+
+scala> val area_under_ROC_nb1 = binaryMetrics_nb1.areaUnderROC //0.60727
+area_under_ROC_nb1: Double = 0.6072668867992563
+
+scala> writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_nb1)
+
+scala> val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
+segundos: Long = 4
+
+scala> val minutos = segundos / 60
+minutos: Long = 0
+
+scala> writer.write("\nFin de Naive Bayes 1 con una duración de: " + segundos +  " segundos o de " +  minutos + " minutos" + "\n")
+
+scala> 
+
+scala> 
+
+scala> //DECISION TREES 1
+
+scala> writer.write("Comienzo Decision Trees 1 con los siguientes parámetros:" +  "\n")
+
+scala> val tiempo_inicial = System.currentTimeMillis / 1000
+tiempo_inicial: Long = 1494014024
+
+scala> //Configuramos el modelo y lo entrenamos
+
+scala> val numClasses = 2
+numClasses: Int = 2
+
+scala> val categoricalFeaturesInfo = Map[Int, Int]()
+categoricalFeaturesInfo: scala.collection.immutable.Map[Int,Int] = Map()
+
+scala> val impurity = "gini"
+impurity: String = gini
+
+scala> val maxDepth = 4
+maxDepth: Int = 4
+
+scala> val maxBins = 32
+maxBins: Int = 32
+
+scala> writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo : Map[Int, Int]()" + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxDepth +  "\n\tmaxBins: " + maxBins + "\n")
+
+scala> val model = DecisionTree.trainClassifier(train, numClasses, categoricalFe aturesInfo,
+     |   impurity, maxDepth, maxBins)
+model: org.apache.spark.mllib.tree.model.DecisionTreeModel = DecisionTreeModel classifier of depth 4 with 31 nodes
+
+scala> //Evaluamos el modelo con el test
+
+scala> val predsAndLabels = test.map { point =>
+     |   val prediction = model.predict(point.features)
+     |   (prediction, point.label)
+     | }
+predsAndLabels: org.apache.spark.rdd.RDD[(Double, Double)] = MapPartitionsRDD[99] at map at <console>:73
+
+scala> //Obtenemos el test error
+
+scala> writer.write("\nResultados:")
+
+scala> val testErr_dt1 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble  / test.count() 
+testErr_dt1: Double = 0.2703884295117246
+
+scala> writer.write("\n\tTestError= " + testErr_dt1)
+
+scala> //println("Learned model:\n" + model.toDebugString) //Mostramos el modelo 
+
+scala> //Mostramos los resultados pormenorizados
+
+scala> val metrics_dt1 = new MulticlassMetrics(predsAndLabels)
+metrics_dt1: org.apache.spark.mllib.evaluation.MulticlassMetrics = org.apache.spark.mllib.evaluation.MulticlassMetrics@1df3a287
+
+scala> writer.write("\n\tPrecisión: " + metrics_dt1.precision)
+
+scala> writer.write("\n\tMatriz de confusión: \n" + metrics_dt1.confusionMatrix  )
+
+scala> val binaryMetrics_dt1 = new BinaryClassificationMetrics(predsAndLabels)
+binaryMetrics_dt1: org.apache.spark.mllib.evaluation.BinaryClassificationMetrics = org.apache.spark.mllib.evaluation.BinaryClassificationMetrics@52bb1af7
+
+scala> val area_under_ROC_dt1 = binaryMetrics_dt1.areaUnderROC //0.67027
+area_under_ROC_dt1: Double = 0.6702681880521422
+
+scala> writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_dt1)
+
+scala> val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
+segundos: Long = 16
+
+scala> val minutos = segundos / 60
+minutos: Long = 0
+
+scala> writer.write("\nFin de Decision Trees 1 con una duración de: " + segundos  + " segundos o de " +  minutos + " minutos" + "\n")
+
+scala> 
+
+scala> 
+
+scala> writer.close()
+
+scala> exit
+warning: there were 1 deprecation warning(s); re-run with -deprecation for details

@@ -1,0 +1,70 @@
+//Mostrar solamente los mensajes de ERROR
+import org.apache.log4j.{Level, Logger}
+var rootLogger = Logger.getRootLogger()
+rootLogger.setLevel(Level.WARN)
+//Importación de las librerías
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkConf
+import org.apache.spark.rdd._
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.mllib.classification.kNN_IS.kNN_IS
+import utils.keel.KeelParser
+import scala.collection.mutable.ListBuffer
+//Random Forest
+import org.apache.spark.mllib.tree.RandomForest
+import org.apache.spark.mllib.tree.model.RandomForestModel
+import org.apache.spark.mllib.util.MLUtils
+//Naive Bayes
+import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
+import org.apache.spark.mllib.linalg.Vectors
+//Decision Trees
+import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.tree.model.DecisionTreeModel
+import org.apache.spark.mllib.util.MLUtils
+//Discretizar Valores
+import org.apache.spark.mllib.feature.MDLPDiscretizer
+//Selección de características
+import org.apache.spark.mllib.feature._
+//Fichero para imprimir las salidas
+import java.io._
+val writer = new PrintWriter(new File("4overyundersalida.txt"))
+//Obtenemos los resultados
+import org.apache.spark.mllib.evaluation._
+//Volver a cargar data sets guardados
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+
+
+//Carga de los datasets
+val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header")
+val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
+val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
+
+val trainROS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_ROS.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
+val testROS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_ROS.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
+
+val trainRUS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_RUS.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
+val testRUS = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_RUS.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
+
+
+train.count()
+test.count()
+train.map(_.label).countByValue()
+test.map(_.label).countByValue()
+
+trainROS.count()
+testROS.count()
+trainROS.map(_.label).countByValue()
+testROS.map(_.label).countByValue()
+
+trainRUS.count()
+testRUS.count()
+trainRUS.map(_.label).countByValue()
+testRUS.map(_.label).countByValue()
+
+
+writer.close()
+
+exit
