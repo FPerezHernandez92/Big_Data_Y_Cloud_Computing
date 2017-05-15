@@ -1,0 +1,22 @@
+Tarea
+
+
+ ¿Qué base de datos usarás para tu experimentación ETL? Tarea
+Introduce el enlace (propio -tu Dropbox, tu GoogleDrive, ...- o ajeno) a la base de datos CSV que usarás para realizar el trabajo práctico.
+Debe ser suficientemente diversa en cuanto a representación (tener al menos 10-15 características) y a población (tener más de 5000 registros).
+Necesitarás usar esta base de datos para realizar las consultas en Pig en modo local (en tu directorio pig/input). Si también necesitas realizar experimentación en Impala/Hive, la base de datos CSV tendrá que estar cargada en tu espacio HDFS de hadoop.ugr.es, y creada y cargada en la base de datos.
+Esta actividad supone un 40% de la calificación final de ETL.
+
+
+
+ Diseña un experimento ETL con Pig a tu medida Tarea
+Usando como base la presentación "Una herramienta clásica para ETL en Hadoop: Pig (ejecución en modo local)", que podrás encontrar en la sección de "Almacenamiento de datos masivos para procesamiento y análisis: ETL" de la asignatura en PRADO, diseña un experimento ETL sobre la base de datos que hayas seleccionado para la experimentación usando la herramienta Pig en modo local.
+Sobre esta experimentación se evaluará:
+si incluye una operación de proyección (10%),
+si incluye una operación de selección (20%),
+el uso de agrupamientos (group) y resúmenes de información (cálculo sobre grupos) (20%) y
+la originalidad del experimento diseñado (10%).
+En esta actividad, debes incluir dos ficheros:
+un script Pig (fichero de texto plano) para realizar el experimento, y
+un documento PDF explicando los detalles de ambos.
+
