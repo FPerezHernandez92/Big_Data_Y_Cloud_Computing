@@ -1,0 +1,23 @@
+GUARDAR EL DATASET REDUCIDO EN HDFS YA QUE DESPUES CON RUS NO SE CARGA
+
+reducedTest10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/");
+reducedTrain10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10/");
+reducedTrain10.repartition(6).coalesce(1, shuffle = true).saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10.data")
+reducedTest10.repartition(6).coalesce(1, shuffle = true).saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10.data")
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runRUS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/mdat20076629/DTSpark/train10/ 250 1 0 hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_RUS.data
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runRUS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/mdat20076629/DTSpark/train10.data 250 1 0 hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_RUS.data
+
+
+
+ROS NO HA FUNCIONADO
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runROS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data 100 250 1 0 2 hdfs://hadoop-master/user/mdat20076629/DTSpark/tst_ROS.data
+
+/opt/spark-1.6.2/bin/spark-submit --class org.apache.spark.mllib.sampling.runROS Imb-sampling-1.1.jar hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data 100 250 0 1 2 hdfs://hadoop-master/user/mdat20076629/DTSpark/tra_ROS.data
+
+
+
+
+

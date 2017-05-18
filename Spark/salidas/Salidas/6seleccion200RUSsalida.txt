@@ -1,0 +1,66 @@
+En train las instancias son: 300134
+En test las instancias son: 412636
+El número de características en train es: 631
+El número de características en test es: 631
+El número de elementos de cada clase en train es: Map(0.0 -> 149957, 1.0 -> 150177)
+El número de elementos de cada clase en test es: Map(0.0 -> 275091, 1.0 -> 137545)
+
+Comienzo Discretización de los Datos con los siguientes parámetros:
+        *** Discretization method: Fayyad discretizer (MDLP)
+        categoricalFeat: Option[Seq[Int]] = None
+        Number of bins: 15
+        Max By Part: 10000
+Fin de Discretización de los datos con una duración de: 44 segundos o de 0 minutos
+
+Comienzo Selección de características con los datos discretizados y los siguientes parámetros:
+        *** FS criterion: MRMR
+        Number of features to select: 200
+        Number of partitions: 6
+En el nuevo train las instancias son: 300134
+En el nuevo test las instancias son: 412636
+Fin de selección de características con los datos discretizados y con una duración de: 217 segundos o de 3 minutos
+
+Comienzo Random Forest con los siguientes parámetros:
+        NumClasses: 2
+        categoricalFeaturesInfo: Map[Int, Int]()
+        numTrees: 10
+        featureSubsetStrategy: auto
+        impurity: gini
+        maxDepth: 4
+        maxBins: 32
+Resultados:
+        Test Error= 0.3149604009344798
+        Precisión: 0.6850395990655203
+        Matriz de confusión:
+182995.0  92096.0
+37868.0   99677.0
+        Area bajo la curva ROC = 0.6949513518916763
+Fin de Random Forest con una duración de: 9 segundos o de 0 minutos
+
+Comienzo Naive Bayes con los siguientes parámetros:
+        lambda: 1.0
+        modelType: multinomial
+Resultados:
+        TestError= 0.31368082280751075
+        Precisión: 0.6863191771924892
+        Matriz de confusión:
+190670.0  84421.0
+45015.0   92530.0
+        Area bajo la curva ROC = 0.6829206930166561
+Fin de Naive Bayes con una duración de: 4 segundos o de 0 minutos
+
+Comienzo Decision Trees con los siguientes parámetros:
+        NumClasses: 2
+        categoricalFeaturesInfo: Map[Int, Int]()
+        impurity: gini
+        maxDepth: 4
+        maxBins: 32
+Resultados:
+        TestError= 0.31913357050766294
+        Precisión: 0.6808664294923371
+        Matriz de confusión:
+177744.0  97347.0
+34339.0   103206.0
+        Area bajo la curva ROC = 0.6982357662437593
+Fin de Decision Trees con una duración de: 5 segundos o de 0 minutos
+

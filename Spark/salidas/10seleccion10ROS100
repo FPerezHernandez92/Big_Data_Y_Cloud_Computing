@@ -30,14 +30,14 @@ import org.apache.spark.mllib.feature.MDLPDiscretizer
 import org.apache.spark.mllib.feature._
 //Fichero para imprimir las salidas
 import java.io._
-val writer = new PrintWriter(new File("2seleccion10salida.txt"))
+val writer = new PrintWriter(new File("10seleccion10ROS100salida.txt"))
 //Obtenemos los resultados
 import org.apache.spark.mllib.evaluation._
 
 
 //Carga de los datasets
 val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header")
-val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
+val train = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train_ROS100.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
 writer.write("En train las instancias son: " + train.count() + "\n")
 val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
 writer.write("En test las instancias son: " + test.count() + "\n")
@@ -96,8 +96,8 @@ writer.write("En el nuevo test las instancias son: " + reducedTest10.count())
 writer.write("\nFin de selección de características con los datos discretizados y con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
 
 
-//RANDOM FOREST 2 CON SELECCIÓN DE CARACTERÍSTICAS
-writer.write("\nComienzo Random Forest 2 (Selección de características) con los siguientes parámetros:" + "\n")
+//RANDOM FOREST
+writer.write("\nComienzo Random Forest con los siguientes parámetros:" + "\n")
 val tiempo_inicial = System.currentTimeMillis / 1000
 val numClasses = 2
 val categoricalFeaturesInfo = Map[Int, Int]()
@@ -128,11 +128,11 @@ val area_under_ROC_rf2 = binaryMetrics_rf2.areaUnderROC
 writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_rf2)
 val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
 val minutos = segundos / 60
-writer.write("\nFin de Random Forest 2 (selección de características) con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
+writer.write("\nFin de Random Forest con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
 
 
-//NAIVE BAYES 2 CON SELECCIÓN DE CARACTERÍSTICAS
-writer.write("Comienzo Naive Bayes 2 (Selección de Características) con los siguientes parámetros:" + "\n")
+//NAIVE BAYES 
+writer.write("Comienzo Naive Bayes con los siguientes parámetros:" + "\n")
 val tiempo_inicial = System.currentTimeMillis / 1000
 //Creamos el modelo
 val miLambda = 1.0
@@ -157,11 +157,11 @@ val area_under_ROC_nb2 = binaryMetrics_nb2.areaUnderROC
 writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_nb2)
 val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
 val minutos = segundos / 60
-writer.write("\nFin de Naive Bayes 2 con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
+writer.write("\nFin de Naive Bayes con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
 
 
-//DECISION TREES 2 CON SELECCIÓN DE CARACTERÍSTICAS
-writer.write("\nComienzo Decision Trees 2 con los siguientes parámetros:" + "\n")
+//DECISION TREES 
+writer.write("\nComienzo Decision Trees con los siguientes parámetros:" + "\n")
 val tiempo_inicial = System.currentTimeMillis / 1000
 //Configuramos el modelo y lo entrenamos
 val numClasses = 2
@@ -191,11 +191,8 @@ val area_under_ROC_dt2 = binaryMetrics_dt2.areaUnderROC
 writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_dt2)
 val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
 val minutos = segundos / 60
-writer.write("\nFin de Decision Trees 2 con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
+writer.write("\nFin de Decision Trees con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
 
 writer.close()
-
-reducedTest10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/");
-reducedTrain10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10/");
 
 exit

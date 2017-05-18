@@ -23,3 +23,66 @@ un documento PDF explicando los detalles de ambos.
 
 https://www.kaggle.com/datasets
 https://www.kaggle.com/secareanualin/football-events
+
+
+El dataset principal, y el que analizaré será: events.csv
+Donde tenemos un dataset con 22 características que son las siguientes:
+	id_odsp -> unique identifier of game (odsp stands from oddsportal.com) -> String
+	id_event -> unique identifier of event (id_odsp + sort_order) -> String
+	sort_order -> chronological sequence of events in a game -> Numeric
+	time -> minute of the game -> Numeric
+	text -> text commentary -> String
+	event_type -> primary event. 11 unique events (1-Attempt(shot), 2-Corner, 3-Foul, 4-Yellow Card, 5-Second yellow card, 6-(Straight) red card, 7-Substitution, 8-Free kick won, 9-Offside, 10-Hand Ball, 11-Penalty conceded) -> String
+	event_type2 -> secondary event. 4 unique events (12 - Key Pass, 13 - Failed through ball, 14-Sending off, 15-Own goal) -> String
+	side -> 1-Home, 2-Away -> String
+	event_team -> team that produced the event. In case of Own goals, event team is the team that beneficiated from the own goal -> String
+	opponent -> Help us describe this column -> String
+	player -> name of the player involved in main event (converted to lowercase and special chars were removed) -> String
+	player2 -> name of player involved in secondary event -> String
+	player_in -> player that came in (only applies to substitutions) -> String
+	player_out -> player substituted (only applies to substitutions) -> String
+	shot_place -> placement of the shot (13 possible placement locations, available in the dictionary, only applies to shots) -> String
+	shot_outcome -> 4 possible outcomes (1-On target, 2-Off target, 3-Blocked, 4-Hit the post) -> String
+	is_goal -> binary variable if the shot resulted in a goal (own goals included) -> Boolean
+	location -> location on the pitch where the event happened (19 possible locations, available in the dictionary) -> String
+	bodypart -> (1- right foot, 2-left foot, 3-head) -> String
+	assist_method -> in case of an assisted shot, 5 possible assist methods (details in the dictionary) -> String
+	situation -> 4 types: 1-Open Play, 2-Set piece (excluding Direct Free kicks), 3-Corner, 4-Free kick -> String
+	fast_break -> binary -> Boolean
+
+Además, tenemos un total de 941009 instancias, donde hay algunas que tiene algunos valores perdidos o no. 
+
+
+TRANSPARENCIAS
+
+measure = load 'input/airQualityEs.csv' using PigStorage(';') AS (date:chararray, co:float, no:float, no2:float, o3:float, pm10:float, sh2:float, pm25:float, pst:float, so2:float, province:chararray, station:chararray);
+
+store measure into 'pigResults/AirQualityProcessed';
+
+less pigResults/AirQualityProcessed/part-m-00000 
+
+dump measure;
+
+
+Localizacion = foreach measure generate province, station;
+dump Localizacion;
+
+
+
+filter_measure = filter measure by date != 'DIA';
+measure_by_province = group filter_measure by province;
+num_measures_by_province = foreach measure_by_province generate group, AVG(filter_measure.co) as measure;
+store num_measures_by_province into 'pigResults/AirQualityProcessed3';
+
+
+
+
+
+
+
+
+
+
+
+
+

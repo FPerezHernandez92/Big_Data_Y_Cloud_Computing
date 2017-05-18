@@ -30,70 +30,28 @@ import org.apache.spark.mllib.feature.MDLPDiscretizer
 import org.apache.spark.mllib.feature._
 //Fichero para imprimir las salidas
 import java.io._
-val writer = new PrintWriter(new File("2seleccion10salida.txt"))
+val writer = new PrintWriter(new File("3reducidosalida.txt"))
 //Obtenemos los resultados
 import org.apache.spark.mllib.evaluation._
+//Volver a cargar data sets guardados
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
 
 
 //Carga de los datasets
-val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header")
-val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
-writer.write("En train las instancias son: " + train.count() + "\n")
-val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
-writer.write("En test las instancias son: " + test.count() + "\n")
+val newTrain = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10/part-*")
+val newTrain1 = newTrain.map(_.replace("(","").replace(")","").replace("[","").replace("]","").split(",").map(_.toDouble))
+val reducedTrain10 = newTrain1.map(x =>  LabeledPoint(x(0),Vectors.dense(x.slice(1,11)))).cache()
+writer.write("En train las instancias son: " + reducedTrain10.count() + "\n")
+val newTest = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/part-*")
+val newTest1 = newTest.map(_.replace("(","").replace(")","").replace("[","").replace("]","").split(",").map(_.toDouble))
+val reducedTest10 = newTest1.map(x =>  LabeledPoint(x(0),Vectors.dense(x.slice(1,11)))).cache()
+writer.write("En test las instancias son: " + reducedTest10.count() + "\n")
 //Para saber el número de características que tenemos:
-writer.write("El número de características en train es: " + train.map(_.features.size).first() + "\n")
-writer.write("El número de características en test es: " + test.map(_.features.size).first() + "\n")
+writer.write("El número de características en train es: " + reducedTrain10.map(_.features.size).first() + "\n")
+writer.write("El número de características en test es: " + reducedTest10.map(_.features.size).first() + "\n")
 //Para saber cuantos elementos hay en cada clase:
-writer.write("El número de elementos de cada clase en train es: " + train.map(_.label).countByValue() + "\n")
-writer.write("El número de elementos de cada clase en test es: " + test.map(_.label).countByValue() + "\n")
-
-
-//DISCRETIZACIÓN DE LOS DATOS
-writer.write("\nComienzo Discretización de los Datos con los siguientes parámetros:" + "\n")
-val tiempo_inicial = System.currentTimeMillis / 1000
-val categoricalFeat: Option[Seq[Int]] = None
-val nBins = 15
-val maxByPart = 10000
-writer.write("\t*** Discretization method: Fayyad discretizer (MDLP)\n")
-writer.write("\tcategoricalFeat: Option[Seq[Int]] = None \n")
-writer.write("\tNumber of bins: " + nBins + "\n")
-writer.write("\tMax By Part: " + maxByPart + "\n")
-//Los datos deben almacenarse en cache para mejorar el rendimiento
-val discretizer = MDLPDiscretizer.train(train, // RDD[LabeledPoint]
-    categoricalFeat, // continuous features
-    nBins, // max number of thresholds by feature
-    maxByPart) // max elements per partition
-discretizer
-//Discretizamos el train
-val discreteTrain = train.map(i => LabeledPoint(i.label, discretizer.transform(i.features))).cache()
-discreteTrain.first()
-//Discretizamos el test
-val discreteTest = test.map(i => LabeledPoint(i.label, discretizer.transform(i.features))).cache()
-val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
-val minutos = segundos / 60
-writer.write("Fin de Discretización de los datos con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
-
-
-//SELECCIÓN DE CARACTERÍSTICAS SOBRE LOS DATOS DISCRETIZADOS
-writer.write("Comienzo Selección de características con los datos discretizados y los siguientes parámetros:" + "\n")
-val tiempo_inicial = System.currentTimeMillis / 1000
-val criterion = new InfoThCriterionFactory("mrmr")
-val nToSelect = 10
-val nPartitions = 6
-writer.write("\t*** FS criterion: " + criterion.getCriterion.toString)
-writer.write("\n\tNumber of features to select: " + nToSelect)
-writer.write("\n\tNumber of partitions: " + nPartitions)
-//Discretizamos con 6 particiones y 10 características
-val featureSelector = new InfoThSelector(criterion, nToSelect, nPartitions).fit(discreteTrain)
-val reducedTrain10 = discreteTrain.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
-//Ahora el test
-val reducedTest10 = discreteTest.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
-val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
-val minutos = segundos / 60
-writer.write("\nEn el nuevo train las instancias son: " + reducedTrain10.count() + "\n")
-writer.write("En el nuevo test las instancias son: " + reducedTest10.count())
-writer.write("\nFin de selección de características con los datos discretizados y con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
+writer.write("El número de elementos de cada clase en train es: " + reducedTrain10.map(_.label).countByValue() + "\n")
+writer.write("El número de elementos de cada clase en test es: " + reducedTest10.map(_.label).countByValue() + "\n")
 
 
 //RANDOM FOREST 2 CON SELECCIÓN DE CARACTERÍSTICAS
@@ -194,8 +152,5 @@ val minutos = segundos / 60
 writer.write("\nFin de Decision Trees 2 con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
 
 writer.close()
-
-reducedTest10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/");
-reducedTrain10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10/");
 
 exit

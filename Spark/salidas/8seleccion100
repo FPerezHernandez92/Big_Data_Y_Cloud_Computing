@@ -30,16 +30,19 @@ import org.apache.spark.mllib.feature.MDLPDiscretizer
 import org.apache.spark.mllib.feature._
 //Fichero para imprimir las salidas
 import java.io._
-val writer = new PrintWriter(new File("2seleccion10salida.txt"))
+val writer = new PrintWriter(new File("8seleccion100salida.txt"))
 //Obtenemos los resultados
 import org.apache.spark.mllib.evaluation._
 
 
 //Carga de los datasets
-val converter = new KeelParser(sc, "hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14.header")
-val train = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tra.data", 6).map(line => converter.parserToLabeledPoint(line)).coalesce(6).cache()
+val newTrain = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train150/part-*")
+val newTrain1 = newTrain.map(_.replace("(","").replace(")","").replace("[","").replace("]","").split(",").map(_.toDouble))
+val train = newTrain1.map(x =>  LabeledPoint(x(0),Vectors.dense(x.slice(1,151)))).cache()
 writer.write("En train las instancias son: " + train.count() + "\n")
-val test = sc.textFile("hdfs://hadoop-master/user/spark/datasets/ECBDL14_mbd/ecbdl14tst.data", 6).map(line => converter.parserToLabeledPoint(line)).cache()
+val newTest = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test150/part-*")
+val newTest1 = newTest.map(_.replace("(","").replace(")","").replace("[","").replace("]","").split(",").map(_.toDouble))
+val test = newTest1.map(x =>  LabeledPoint(x(0),Vectors.dense(x.slice(1,151)))).cache()
 writer.write("En test las instancias son: " + test.count() + "\n")
 //Para saber el número de características que tenemos:
 writer.write("El número de características en train es: " + train.map(_.features.size).first() + "\n")
@@ -79,25 +82,28 @@ writer.write("Fin de Discretización de los datos con una duración de: " + segu
 writer.write("Comienzo Selección de características con los datos discretizados y los siguientes parámetros:" + "\n")
 val tiempo_inicial = System.currentTimeMillis / 1000
 val criterion = new InfoThCriterionFactory("mrmr")
-val nToSelect = 10
+val nToSelect = 100
 val nPartitions = 6
 writer.write("\t*** FS criterion: " + criterion.getCriterion.toString)
 writer.write("\n\tNumber of features to select: " + nToSelect)
 writer.write("\n\tNumber of partitions: " + nPartitions)
 //Discretizamos con 6 particiones y 10 características
 val featureSelector = new InfoThSelector(criterion, nToSelect, nPartitions).fit(discreteTrain)
-val reducedTrain10 = discreteTrain.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
+val reducedTrain100 = discreteTrain.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
 //Ahora el test
-val reducedTest10 = discreteTest.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
+val reducedTest100 = discreteTest.map(i => LabeledPoint(i.label, featureSelector.transform(i.features))).cache()
 val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
 val minutos = segundos / 60
-writer.write("\nEn el nuevo train las instancias son: " + reducedTrain10.count() + "\n")
-writer.write("En el nuevo test las instancias son: " + reducedTest10.count())
+writer.write("\nEn el nuevo train las instancias son: " + reducedTrain100.count() + "\n")
+writer.write("En el nuevo test las instancias son: " + reducedTest100.count())
 writer.write("\nFin de selección de características con los datos discretizados y con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
 
+reducedTest100.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test100/");
+reducedTrain100.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train100/");
 
-//RANDOM FOREST 2 CON SELECCIÓN DE CARACTERÍSTICAS
-writer.write("\nComienzo Random Forest 2 (Selección de características) con los siguientes parámetros:" + "\n")
+
+//RANDOM FOREST
+writer.write("\nComienzo Random Forest con los siguientes parámetros:" + "\n")
 val tiempo_inicial = System.currentTimeMillis / 1000
 val numClasses = 2
 val categoricalFeaturesInfo = Map[Int, Int]()
@@ -107,16 +113,16 @@ val impurity = "gini"
 val maxDepth = 4
 val maxBins = 32
 writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo: Map[Int, Int]()" + "\n\tnumTrees: " + numTrees + "\n\tfeatureSubsetStrategy: " + featureSubsetStrategy + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxDepth + "\n\tmaxBins: " + maxBins + "\n")
-val model = RandomForest.trainClassifier(reducedTrain10, numClasses, categoricalFeaturesInfo,
+val model = RandomForest.trainClassifier(reducedTrain100, numClasses, categoricalFeaturesInfo,
   numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
 //Evaluamos el modelo con el test
-val predsAndLabels = reducedTest10.map { point =>
+val predsAndLabels = reducedTest100.map { point =>
   val prediction = model.predict(point.features)
   (prediction, point.label)
 }
 //Obtenemos el test error
 writer.write("Resultados:")
-val testErr_rf2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest10.count()
+val testErr_rf2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest100.count()
 writer.write("\n\tTest Error= " + testErr_rf2)
 //println("Learned model:\n" + model.toDebugString) //Mostramos el modelo COMENTADO
 //Mostramos los resultados pormenorizados
@@ -128,25 +134,25 @@ val area_under_ROC_rf2 = binaryMetrics_rf2.areaUnderROC
 writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_rf2)
 val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
 val minutos = segundos / 60
-writer.write("\nFin de Random Forest 2 (selección de características) con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
+writer.write("\nFin de Random Forest con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
 
 
-//NAIVE BAYES 2 CON SELECCIÓN DE CARACTERÍSTICAS
-writer.write("Comienzo Naive Bayes 2 (Selección de Características) con los siguientes parámetros:" + "\n")
+//NAIVE BAYES 
+writer.write("Comienzo Naive Bayes con los siguientes parámetros:" + "\n")
 val tiempo_inicial = System.currentTimeMillis / 1000
 //Creamos el modelo
 val miLambda = 1.0
 val miModelType = "multinomial"
 writer.write("\tlambda: " + miLambda + "\n\tmodelType: " + miModelType + "\n")
-val model = NaiveBayes.train(reducedTrain10, lambda = miLambda, modelType = miModelType)
+val model = NaiveBayes.train(reducedTrain100, lambda = miLambda, modelType = miModelType)
 //Evaluamos el modelo
-val predsAndLabels = reducedTest10.map { point =>
+val predsAndLabels = reducedTest100.map { point =>
   val prediction = model.predict(point.features)
   (prediction, point.label)
 }
 //Obtenemos el test error
 writer.write("Resultados:")
-val testErr_nb2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest10.count()
+val testErr_nb2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest100.count()
 writer.write("\n\tTestError= " + testErr_nb2)
 //Mostramos los resultados pormenorizados
 val metrics_nb2 = new MulticlassMetrics(predsAndLabels)
@@ -157,11 +163,11 @@ val area_under_ROC_nb2 = binaryMetrics_nb2.areaUnderROC
 writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_nb2)
 val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
 val minutos = segundos / 60
-writer.write("\nFin de Naive Bayes 2 con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
+writer.write("\nFin de Naive Bayes con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n")
 
 
-//DECISION TREES 2 CON SELECCIÓN DE CARACTERÍSTICAS
-writer.write("\nComienzo Decision Trees 2 con los siguientes parámetros:" + "\n")
+//DECISION TREES 
+writer.write("\nComienzo Decision Trees con los siguientes parámetros:" + "\n")
 val tiempo_inicial = System.currentTimeMillis / 1000
 //Configuramos el modelo y lo entrenamos
 val numClasses = 2
@@ -170,16 +176,16 @@ val impurity = "gini"
 val maxDepth = 4
 val maxBins = 32
 writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo: Map[Int, Int]()" + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxDepth + "\n\tmaxBins: " + maxBins + "\n")
-val model = DecisionTree.trainClassifier(reducedTrain10, numClasses, categoricalFeaturesInfo,
+val model = DecisionTree.trainClassifier(reducedTrain100, numClasses, categoricalFeaturesInfo,
   impurity, maxDepth, maxBins)
 //Evaluamos el modelo con el test
-val predsAndLabels = reducedTest10.map { point =>
+val predsAndLabels = reducedTest100.map { point =>
   val prediction = model.predict(point.features)
   (prediction, point.label)
 }
 //Obtenemos el test error
 writer.write("Resultados:")
-val testErr_dt2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest10.count() 
+val testErr_dt2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / reducedTest100.count() 
 writer.write("\n\tTestError= " + testErr_dt2)
 //println("Learned model:\n" + model.toDebugString) //Mostramos el modelo
 //Mostramos los resultados pormenorizados
@@ -191,11 +197,8 @@ val area_under_ROC_dt2 = binaryMetrics_dt2.areaUnderROC
 writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_dt2)
 val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
 val minutos = segundos / 60
-writer.write("\nFin de Decision Trees 2 con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
+writer.write("\nFin de Decision Trees con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
 
 writer.close()
-
-reducedTest10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test10/");
-reducedTrain10.saveAsTextFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train10/");
 
 exit
