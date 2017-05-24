@@ -1,0 +1,43 @@
+En train las instancias son: 499449
+En test las instancias son: 412636
+El número de características en train es: 150
+El número de características en test es: 150
+El número de elementos de cada clase en train es: Map(0.0 -> 349272, 1.0 -> 150177)
+El número de elementos de cada clase en test es: Map(0.0 -> 275091, 1.0 -> 137545)
+
+Comienzo Random Forest con los siguientes parámetros:
+        NumClasses: 2
+        categoricalFeaturesInfo: Map[Int, Int]()
+        numTrees: 50
+        featureSubsetStrategy: auto
+        impurity: gini
+        maxDepth: 8
+        maxBins: 32
+Resultados:
+	Test Error= 0.26073827780416636
+        Precisión: 0.7392617221958336
+        Matriz de confusión:
+255734.0  19357.0
+88233.0   49312.0
+        Area bajo la curva ROC = 0.6440747943687634
+Fin de Random Forest con una duración de: 60 segundos o de 1 minutos
+
+
+Comienzo Decision Trees con los siguientes parámetros:
+        NumClasses: 2
+        categoricalFeaturesInfo: Map[Int, Int]()
+        impurity: gini
+        maxDepth: 8
+        maxBins: 32
+Resultados:
+	TestError= 0.2522271445050844
+        Precisión: 0.7477728554949156
+        Matriz de confusión:
+241739.0  33352.0
+70726.0   66819.0
+        Area bajo la curva ROC = 0.6822787473915457
+Fin de Decision Trees con una duración de: 9 segundos o de 0 minutos
+
+
+
+

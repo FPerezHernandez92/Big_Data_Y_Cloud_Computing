@@ -1,0 +1,124 @@
+//Mostrar solamente los mensajes de ERROR
+import org.apache.log4j.{Level, Logger}
+var rootLogger = Logger.getRootLogger()
+rootLogger.setLevel(Level.WARN)
+//Importación de las librerías
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkConf
+import org.apache.spark.rdd._
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.mllib.classification.kNN_IS.kNN_IS
+import utils.keel.KeelParser
+import scala.collection.mutable.ListBuffer
+//Random Forest
+import org.apache.spark.mllib.tree.RandomForest
+import org.apache.spark.mllib.tree.model.RandomForestModel
+import org.apache.spark.mllib.util.MLUtils
+//Naive Bayes
+import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
+import org.apache.spark.mllib.linalg.Vectors
+//Decision Trees
+import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.tree.model.DecisionTreeModel
+import org.apache.spark.mllib.util.MLUtils
+//Discretizar Valores
+import org.apache.spark.mllib.feature.MDLPDiscretizer
+//Selección de características
+import org.apache.spark.mllib.feature._
+//Fichero para imprimir las salidas
+import java.io._
+val writer = new PrintWriter(new File("2s150ROSsalida.txt"))
+//Obtenemos los resultados
+import org.apache.spark.mllib.evaluation._
+
+
+//Carga de los datasets
+val newTrain = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/train150ROS100/part-*")
+val newTrain1 = newTrain.map(_.replace("(","").replace(")","").replace("[","").replace("]","").split(",").map(_.toDouble))
+val train = newTrain1.map(x =>  LabeledPoint(x(0),Vectors.dense(x.slice(1,151)))).cache()
+writer.write("En train las instancias son: " + train.count() + "\n")
+val newTest = sc.textFile("hdfs://hadoop-master/user/mdat20076629/DTSpark/test150ROS100/part-*")
+val newTest1 = newTest.map(_.replace("(","").replace(")","").replace("[","").replace("]","").split(",").map(_.toDouble))
+val test = newTest1.map(x =>  LabeledPoint(x(0),Vectors.dense(x.slice(1,151)))).cache()
+writer.write("En test las instancias son: " + test.count() + "\n")
+//Para saber el número de características que tenemos:
+writer.write("El número de características en train es: " + train.map(_.features.size).first() + "\n")
+writer.write("El número de características en test es: " + test.map(_.features.size).first() + "\n")
+//Para saber cuantos elementos hay en cada clase:
+writer.write("El número de elementos de cada clase en train es: " + train.map(_.label).countByValue() + "\n")
+writer.write("El número de elementos de cada clase en test es: " + test.map(_.label).countByValue() + "\n")
+
+//RANDOM FOREST
+writer.write("\nComienzo Random Forest con los siguientes parámetros:" + "\n")
+val tiempo_inicial = System.currentTimeMillis / 1000
+val numClasses = 2
+val categoricalFeaturesInfo = Map[Int, Int]()
+val numTrees = 50 
+val featureSubsetStrategy = "auto" 
+val impurity = "gini"
+val maxDepth = 16
+val maxBins = 32
+writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo: Map[Int, Int]()" + "\n\tnumTrees: " + numTrees + "\n\tfeatureSubsetStrategy: " + featureSubsetStrategy + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxDepth + "\n\tmaxBins: " + maxBins + "\n")
+val model = RandomForest.trainClassifier(train, numClasses, categoricalFeaturesInfo,
+  numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
+//Evaluamos el modelo con el test
+val predsAndLabels = test.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
+}
+//Obtenemos el test error
+writer.write("Resultados:")
+val testErr_rf2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count()
+writer.write("\n\tTest Error= " + testErr_rf2)
+//println("Learned model:\n" + model.toDebugString) //Mostramos el modelo COMENTADO
+//Mostramos los resultados pormenorizados
+val metrics_rf2 = new MulticlassMetrics(predsAndLabels)
+writer.write("\n\tPrecisión: " + metrics_rf2.precision)
+writer.write("\n\tMatriz de confusión: \n" + metrics_rf2.confusionMatrix )
+val binaryMetrics_rf2 = new BinaryClassificationMetrics(predsAndLabels)
+val area_under_ROC_rf2 = binaryMetrics_rf2.areaUnderROC
+writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_rf2)
+val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
+val minutos = segundos / 60
+writer.write("\nFin de Random Forest con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
+
+
+//DECISION TREES 
+writer.write("\nComienzo Decision Trees con los siguientes parámetros:" + "\n")
+val tiempo_inicial = System.currentTimeMillis / 1000
+//Configuramos el modelo y lo entrenamos
+val numClasses = 2
+val categoricalFeaturesInfo = Map[Int, Int]()
+val impurity = "gini"
+val maxDepth = 16
+val maxBins = 32
+writer.write("\tNumClasses: " + numClasses + "\n\tcategoricalFeaturesInfo: Map[Int, Int]()" + "\n\timpurity: " + impurity + "\n\tmaxDepth: " + maxDepth + "\n\tmaxBins: " + maxBins + "\n")
+val model = DecisionTree.trainClassifier(train, numClasses, categoricalFeaturesInfo,
+  impurity, maxDepth, maxBins)
+//Evaluamos el modelo con el test
+val predsAndLabels = test.map { point =>
+  val prediction = model.predict(point.features)
+  (prediction, point.label)
+}
+//Obtenemos el test error
+writer.write("Resultados:")
+val testErr_dt2 = predsAndLabels.filter(r => r._1 != r._2).count.toDouble / test.count() 
+writer.write("\n\tTestError= " + testErr_dt2)
+//println("Learned model:\n" + model.toDebugString) //Mostramos el modelo
+//Mostramos los resultados pormenorizados
+val metrics_dt2 = new MulticlassMetrics(predsAndLabels)
+writer.write("\n\tPrecisión: " + metrics_dt2.precision)
+writer.write("\n\tMatriz de confusión: \n" + metrics_dt2.confusionMatrix )
+val binaryMetrics_dt2 = new BinaryClassificationMetrics(predsAndLabels)
+val area_under_ROC_dt2 = binaryMetrics_dt2.areaUnderROC
+writer.write("\n\tArea bajo la curva ROC = " + area_under_ROC_dt2)
+val segundos = (System.currentTimeMillis / 1000) - tiempo_inicial
+val minutos = segundos / 60
+writer.write("\nFin de Decision Trees con una duración de: " + segundos + " segundos o de " +  minutos + " minutos" + "\n\n")
+
+writer.close()
+
+exit

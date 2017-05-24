@@ -1,0 +1,57 @@
+En train las instancias son: 699014
+En test las instancias son: 412636
+El número de características en train es: 125
+El número de características en test es: 125
+El número de elementos de cada clase en train es: Map(0.0 -> 349272, 1.0 -> 349742)
+El número de elementos de cada clase en test es: Map(0.0 -> 275091, 1.0 -> 137545)
+
+Comienzo Discretización de los Datos con los siguientes parámetros:
+        *** Discretization method: Fayyad discretizer (MDLP)
+        categoricalFeat: Option[Seq[Int]] = None
+        Number of bins: 15
+        Max By Part: 10000
+Fin de Discretización de los datos con una duración de: 14 segundos o de 0 minutos
+
+Comienzo Selección de características con los datos discretizados y los siguientes parámetros:
+        *** FS criterion: MRMR
+        Number of features to select: 100
+        Number of partitions: 6
+En el nuevo train las instancias son: 699014
+En el nuevo test las instancias son: 412636
+Fin de selección de características con los datos discretizados y con una duración de: 73 segundos o de 1 minutos
+
+Comienzo Random Forest con los siguientes parámetros:
+        NumClasses: 2
+        categoricalFeaturesInfo: Map[Int, Int]()
+        numTrees: 50
+        featureSubsetStrategy: auto
+        impurity: gini
+        maxDepth: 16
+        maxBins: 32
+Resultados:
+	Test Error= 0.2689392103451953
+        Precisión: 0.7310607896548047
+        Matriz de confusión:
+205210.0  69881.0
+41093.0   96452.0
+        Area bajo la curva ROC = 0.723605463718541
+Fin de Random Forest con una duración de: 268 segundos o de 4 minutos
+
+
+Comienzo Decision Trees con los siguientes parámetros:
+        NumClasses: 2
+        categoricalFeaturesInfo: Map[Int, Int]()
+        impurity: gini
+        maxDepth: 16
+        maxBins: 32
+Resultados:
+	TestError= 0.28854486763152026
+        Precisión: 0.7114551323684797
+        Matriz de confusión:
+201509.0  73582.0
+45482.0   92063.0
+        Area bajo la curva ROC = 0.7009238203540599
+Fin de Decision Trees con una duración de: 13 segundos o de 0 minutos
+
+
+
