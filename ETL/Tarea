@@ -7,8 +7,6 @@ Debe ser suficientemente diversa en cuanto a representación (tener al menos 10-
 Necesitarás usar esta base de datos para realizar las consultas en Pig en modo local (en tu directorio pig/input). Si también necesitas realizar experimentación en Impala/Hive, la base de datos CSV tendrá que estar cargada en tu espacio HDFS de hadoop.ugr.es, y creada y cargada en la base de datos.
 Esta actividad supone un 40% de la calificación final de ETL.
 
-
-
  Diseña un experimento ETL con Pig a tu medida Tarea
 Usando como base la presentación "Una herramienta clásica para ETL en Hadoop: Pig (ejecución en modo local)", que podrás encontrar en la sección de "Almacenamiento de datos masivos para procesamiento y análisis: ETL" de la asignatura en PRADO, diseña un experimento ETL sobre la base de datos que hayas seleccionado para la experimentación usando la herramienta Pig en modo local.
 Sobre esta experimentación se evaluará:
@@ -20,10 +18,8 @@ En esta actividad, debes incluir dos ficheros:
 un script Pig (fichero de texto plano) para realizar el experimento, y
 un documento PDF explicando los detalles de ambos.
 
-
 https://www.kaggle.com/datasets
 https://www.kaggle.com/secareanualin/football-events
-
 
 El dataset principal, y el que analizaré será: events.csv
 Donde tenemos un dataset con 22 características que son las siguientes:
@@ -49,40 +45,81 @@ Donde tenemos un dataset con 22 características que son las siguientes:
 	assist_method -> in case of an assisted shot, 5 possible assist methods (details in the dictionary) -> String
 	situation -> 4 types: 1-Open Play, 2-Set piece (excluding Direct Free kicks), 3-Corner, 4-Free kick -> String
 	fast_break -> binary -> Boolean
-
 Además, tenemos un total de 941009 instancias, donde hay algunas que tiene algunos valores perdidos o no. 
 
-
 TRANSPARENCIAS
-
 measure = load 'input/airQualityEs.csv' using PigStorage(';') AS (date:chararray, co:float, no:float, no2:float, o3:float, pm10:float, sh2:float, pm25:float, pst:float, so2:float, province:chararray, station:chararray);
-
 store measure into 'pigResults/AirQualityProcessed';
-
 less pigResults/AirQualityProcessed/part-m-00000 
-
+store measure into 'pigResults/AirQualityProcessed2' using PigStorage (',');
+less pigResults/AirQualityProcessed2/part-m-00000
 dump measure;
-
-
 Localizacion = foreach measure generate province, station;
 dump Localizacion;
-
-
 
 filter_measure = filter measure by date != 'DIA';
 measure_by_province = group filter_measure by province;
 num_measures_by_province = foreach measure_by_province generate group, AVG(filter_measure.co) as measure;
 store num_measures_by_province into 'pigResults/AirQualityProcessed3';
+less pigResults/AirQualityProcessed3/part-r-00000
+
+- Cargamos la base de datos:
+dt_event = load 'input/events.csv' using PigStorage(',') AS (id_odsp:chararray, id_event:chararray, sort_order:float, time:float, text:chararray, event_type:chararray, event_type2:chararray, side:chararray, event_team:chararray, opponent:chararray, player:chararray, player2:chararray, player_in:chararray, player_out:chararray, shot_place:chararray, shot_outcome:chararray, is_goal:int, location:chararray, bodypart:chararray, assist_method:chararray, situation:chararray, fast_break:int);
+- Almacenamos la lectura:
+store measure into 'pigResults/EventsProcessed';
+- Hacemos una proyección de los equipos y del jugador que ha realizado el evento:
+Equipos_y_Jugador = foreach dt_event generate event_team, opponent, player;
+dump Equipos_y_Jugador;
+- Seleccionamos los eventos en los que el equipo local ha sido el Real Madrid o Juventus
+RM_J_Local = filter dt_event by (event_team == '"Real Madrid"') OR (event_team == '"Juventus"');
+dump RM_J_Local;
+- Agrupamos por equipo rival:
+RM_J_Rival = group RM_J_Local by opponent;
+dump RM_J_Rival;
+store RM_J_Rival into 'pigResults/RM_J_Rival';
 
 
 
+TIRON:
+dt_event = load 'input/events.csv' using PigStorage(',') AS (id_odsp:chararray, id_event:chararray, sort_order:float, time:float, text:chararray, event_type:chararray, event_type2:chararray, side:chararray, event_team:chararray, opponent:chararray, player:chararray, player2:chararray, player_in:chararray, player_out:chararray, shot_place:chararray, shot_outcome:chararray, is_goal:int, location:chararray, bodypart:chararray, assist_method:chararray, situation:chararray, fast_break:int);
+dump dt_event;
+Equipos_y_Jugador = foreach dt_event generate event_team, opponent, player;
+dump Equipos_y_Jugador;
+
+- Minuto medio en el que pasan las cosas
+RM_J_Local = filter dt_event by (event_team == '"Real Madrid"') OR (event_team == '"Juventus"');
+dump RM_J_Local;
+RM_J_Rival = group RM_J_Local by opponent;
+dump RM_J_Rival;
+minuto_medio = foreach RM_J_Rival generate group, AVG(RM_J_Local.time) as dt_event;
+dump minuto_medio;
+
+- Numero de tarjetas rojas que ha recibdo por oponente
+RM_RedCard = filter dt_event by (event_team == '"Real Madrid"') AND (event_type == '6');
+dump RM_RedCard;
+RM_RC_Rival = group RM_RedCard by opponent;
+dump RM_RC_Rival;
+num_rojas = foreach RM_RC_Rival generate group, COUNT(RM_RedCard) as dt_event;
+dump num_rojas;
+
+- Numero de penaltiles por oponente
+RM_Penalty = filter dt_event by (event_team == '"Real Madrid"') AND (event_type == '11');
+dump RM_Penalty;
+RM_Penal_Rival = group RM_Penalty by opponent;
+dump RM_Penal_Rival;
+num_penal = foreach RM_Penal_Rival generate group, COUNT(RM_Penalty) as dt_event;
+dump num_penal;
 
 
-
-
-
-
-
-
-
+store dt_event into 'pigResults/EventsProcessed';
+store Equipos_y_Jugador into 'pigResults/Equipos_y_Jugador';
+store RM_J_Local into 'pigResults/RM_J_Local';
+store RM_J_Rival into 'pigResults/RM_J_Rival';
+store minuto_medio into 'pigResults/minuto_medio';
+store RM_RedCard into 'pigResults/RM_RedCard';
+store RM_RC_Rival into 'pigResults/RM_RC_Rival';
+store num_rojas into 'pigResults/num_rojas';
+store RM_Penalty into 'pigResults/RM_Penalty';
+store RM_Penal_Rival into 'pigResults/RM_Penal_Rival';
+store num_penal into 'pigResults/num_penal';
 

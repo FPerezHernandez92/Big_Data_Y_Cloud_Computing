@@ -1,0 +1,38 @@
+dt_event = load 'input/events.csv' using PigStorage(',') AS (id_odsp:chararray, id_event:chararray, sort_order:float, time:float, text:chararray, event_type:chararray, event_type2:chararray, side:chararray, event_team:chararray, opponent:chararray, player:chararray, player2:chararray, player_in:chararray, player_out:chararray, shot_place:chararray, shot_outcome:chararray, is_goal:int, location:chararray, bodypart:chararray, assist_method:chararray, situation:chararray, fast_break:int);
+dump dt_event;
+Equipos_y_Jugador = foreach dt_event generate event_team, opponent, player;
+dump Equipos_y_Jugador;
+
+RM_J_Local = filter dt_event by (event_team == '"Real Madrid"') OR (event_team == '"Juventus"');
+dump RM_J_Local;
+RM_J_Rival = group RM_J_Local by opponent;
+dump RM_J_Rival;
+minuto_medio = foreach RM_J_Rival generate group, AVG(RM_J_Local.time) as dt_event;
+dump minuto_medio;
+
+RM_RedCard = filter dt_event by (event_team == '"Real Madrid"') AND (event_type == '6');
+dump RM_RedCard;
+RM_RC_Rival = group RM_RedCard by opponent;
+dump RM_RC_Rival;
+num_rojas = foreach RM_RC_Rival generate group, COUNT(RM_RedCard) as dt_event;
+dump num_rojas;
+
+RM_Penalty = filter dt_event by (event_team == '"Real Madrid"') AND (event_type == '11');
+dump RM_Penalty;
+RM_Penal_Rival = group RM_Penalty by opponent;
+dump RM_Penal_Rival;
+num_penal = foreach RM_Penal_Rival generate group, COUNT(RM_Penalty) as dt_event;
+dump num_penal;
+
+store dt_event into 'pigResults/EventsProcessed';
+store Equipos_y_Jugador into 'pigResults/Equipos_y_Jugador';
+store RM_J_Local into 'pigResults/RM_J_Local';
+store RM_J_Rival into 'pigResults/RM_J_Rival';
+store minuto_medio into 'pigResults/minuto_medio';
+store RM_RedCard into 'pigResults/RM_RedCard';
+store RM_RC_Rival into 'pigResults/RM_RC_Rival';
+store num_rojas into 'pigResults/num_rojas';
+store RM_Penalty into 'pigResults/RM_Penalty';
+store RM_Penal_Rival into 'pigResults/RM_Penal_Rival';
+store num_penal into 'pigResults/num_penal';
+
